@@ -13,7 +13,7 @@
 #define DATAPIN    13 // GPIO15 - MISO
 #define CLOCKPIN   14 // GPIO14 - CLK
 #define DELIMITER ";"
-#define PORT
+#define PORT 9999
 
 Adafruit_DotStar strip = Adafruit_DotStar(NUMPIXELS, DATAPIN, CLOCKPIN);
 MDNSResponder mdns;
@@ -31,7 +31,7 @@ void setup(void){
   
   Serial.begin(115200); 
   Serial.println("");
-//  WiFi.mode(WIFI_STA);
+  WiFi.mode(WIFI_STA);
   WiFiMulti.addAP(ssid, password);
   Serial.println("");
   
@@ -62,6 +62,7 @@ void setup(void){
   server.on("/", HTTP_GET, handleGet);
   
   server.on("/", HTTP_POST, handlePost);
+  server.on("/solid", HTTP_POST, handleSolidPost);
 
   server.begin();
   Serial.println("HTTP server started");
@@ -106,16 +107,29 @@ void handleGet(){
 
 void handlePost(){
   server.send(200, "text/html", "All good");
-  Serial.println("[POST] Data: ");
+  Serial.println("[POST] /");
+  Serial.print("data: ");
+  Serial.println(server.arg("data"));
   int head = 0;
   char* input = string2char(server.arg("data"));
   char* colorStr;
   while ((colorStr = strtok_r(input, DELIMITER, &input)) != NULL && head < NUMPIXELS){
-    Serial.println("colorStr: ");
-    Serial.println(colorStr);
     long color = strtoul (colorStr, NULL, 16);
-    Serial.println("color: ");
-    Serial.println(color);
+    strip.setPixelColor(head, color);
+    head++;
+  }
+  strip.show();
+}
+
+void handleSolidPost(){
+  server.send(200, "text/html", "All good");
+  Serial.println("[POST] /solid");
+  Serial.print("data: ");
+  Serial.println(server.arg("data"));
+  int head = 0;
+  char* colorStr = string2char(server.arg("data"));
+  long color = strtoul (colorStr, NULL, 16);
+  while (head < NUMPIXELS){
     strip.setPixelColor(head, color);
     head++;
   }

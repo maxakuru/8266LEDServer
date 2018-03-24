@@ -111,11 +111,14 @@ void handlePost(){
   Serial.print("data: ");
   Serial.println(server.arg("data"));
   int head = 0;
+  int mod = server.arg("mod") ? server.arg("mod").toInt() : 1;
+  Serial.print("mod: ");
+  Serial.println(mod);
   char* input = string2char(server.arg("data"));
   char* colorStr;
   while ((colorStr = strtok_r(input, DELIMITER, &input)) != NULL && head < NUMPIXELS){
     long color = strtoul (colorStr, NULL, 16);
-    strip.setPixelColor(head, color);
+    setColor(color, head, head+mod);
     head++;
   }
   strip.show();
@@ -126,14 +129,18 @@ void handleSolidPost(){
   Serial.println("[POST] /solid");
   Serial.print("data: ");
   Serial.println(server.arg("data"));
-  int head = 0;
   char* colorStr = string2char(server.arg("data"));
   long color = strtoul (colorStr, NULL, 16);
-  while (head < NUMPIXELS){
+  setColor(color, 0, NUMPIXELS);
+  strip.show();
+}
+
+void setColor(long color, int from, int to){
+  int head = from;
+  while (head < to && head < NUMPIXELS){
     strip.setPixelColor(head, color);
     head++;
   }
-  strip.show();
 }
 
 void loop(void){

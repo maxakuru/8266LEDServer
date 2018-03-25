@@ -18,7 +18,7 @@
 Adafruit_DotStar strip = Adafruit_DotStar(NUMPIXELS, DATAPIN, CLOCKPIN);
 MDNSResponder mdns;
 
-const String tableID = "1";
+const String ID = "0";
 // Network creds
 const char* ssid = "ssid";
 const char* password = "pass";
@@ -59,7 +59,7 @@ void setup(void){
     Serial.println("MDNS responder started");
   }
 
-  server.on("/", HTTP_GET, handleGet);
+  server.on("/id", HTTP_GET, handleIDGet);
   
   server.on("/", HTTP_POST, handlePost);
   server.on("/solid", HTTP_POST, handleSolidPost);
@@ -67,6 +67,18 @@ void setup(void){
   server.begin();
   Serial.println("HTTP server started");
 
+  char* colorStr = "FF0000";
+  uint8_t rcolor =  strtoul (colorStr, NULL, 16) >> 16;
+  uint8_t gcolor =  strtoul (colorStr+2, NULL, 16) >> 8;
+  uint8_t bcolor =  strtoul (colorStr+4, NULL, 16);
+//  uint32_t color = (uint32_t) strtoul (colorStr, NULL, 16);
+  uint32_t ucolor = packRGB(gcolor,
+                             rcolor,
+                             bcolor);
+  Serial.print("ucolor: ");
+  Serial.println(ucolor);
+  setColor(ucolor, 0, NUMPIXELS);
+  
   //setup strip
   strip.begin();
   strip.show();
@@ -100,9 +112,18 @@ char* string2char(String command){
     }
 }
 
-void handleGet(){
-  Serial.println("[GET]");
-  server.send(200, "text/html", "TableID: "+tableID);
+uint32_t packRGB(uint8_t r, uint8_t g, uint8_t b) {
+  return ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+}
+
+uint32_t packGRB(uint8_t g, uint8_t r, uint8_t b) {
+  return ((uint32_t)g << 16) | ((uint32_t)r << 8) | b;
+}
+
+
+void handleIDGet(){
+  Serial.println("[GET] /id");
+  server.send(200, "text/json", "{\"id\": "+ID+"}");
 }
 
 void handlePost(){
@@ -117,8 +138,18 @@ void handlePost(){
   char* input = string2char(server.arg("data"));
   char* colorStr;
   while ((colorStr = strtok_r(input, DELIMITER, &input)) != NULL && head < NUMPIXELS){
-    long color = strtoul (colorStr, NULL, 16);
-    setColor(color, head, head+mod);
+    Serial.print("colorStr: ");
+    Serial.println(colorStr);
+    // RGB
+//    uint32_t color = (uint32_t) strtoul (colorStr, NULL, 16);
+     // ANYTHING ELSE
+    uint8_t gcolor = (uint32_t) strtoul (colorStr, NULL, 16) >> 16;
+    uint8_t rcolor = (uint32_t) strtoul (colorStr+2, NULL, 16) >> 8;
+    uint8_t bcolor = (uint32_t) strtoul (colorStr+4, NULL, 16);
+    uint32_t ucolor = packGRB(gcolor,
+                              rcolor,
+                              bcolor);
+    setColor(ucolor, head, head+mod);
     head++;
   }
   strip.show();
@@ -130,15 +161,44 @@ void handleSolidPost(){
   Serial.print("data: ");
   Serial.println(server.arg("data"));
   char* colorStr = string2char(server.arg("data"));
-  long color = strtoul (colorStr, NULL, 16);
-  setColor(color, 0, NUMPIXELS);
+  Serial.print("colorStr: ");
+  Serial.println(colorStr);
+  // RGB
+//  uint32_t color = (uint32_t) strtoul (colorStr, NULL, 16);
+  
+  // ANYTHING ELSE
+  uint8_t rcolor = strtoul (colorStr, NULL, 16);
+  uint8_t gcolor = strtoul (colorStr+2, NULL, 16);
+  uint8_t bcolor = strtoul (colorStr+4, NULL, 16);
+  uint32_t ucolor = packRGB(gcolor,
+                            rcolor,
+                            bcolor);
+//  setColor(ucolor, 0, NUMPIXELS);
+  setColorRGB(rcolor, gcolor, bcolor, 0, NUMPIXELS);
   strip.show();
 }
 
-void setColor(long color, int from, int to){
+void setColor(uint32_t color, int from, int to){
   int head = from;
   while (head < to && head < NUMPIXELS){
+    Serial.print("ucolor: ");
+    Serial.println(color);
     strip.setPixelColor(head, color);
+    head++;
+  }
+}
+
+
+void setColorRGB(uint8_t r, uint8_t g, uint8_t b, int from, int to){
+  int head = from;
+  while (head < to && head < NUMPIXELS){
+    Serial.print("rcolor: ");
+    Serial.println(r);
+    Serial.print("gcolor: ");
+    Serial.println(g);
+    Serial.print("bcolor: ");
+    Serial.println(b);
+    strip.setPixelColor(head, g, r, b);
     head++;
   }
 }
